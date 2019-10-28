@@ -5,6 +5,7 @@ import math
 import itertools
 import random
 import time
+import numpy as np
 
 
 # An online learning environment for the progressive recovery problem. Given a graph G, our states 
@@ -194,7 +195,7 @@ class Environment:
 
         return true_action
 
-    def step(self, action, action_is_index=False, debug=False, neg=True):
+    def step(self, action, action_is_index=False, debug=False, neg=False):
         """
         Applies a partition of resources to the graph G
 
@@ -263,6 +264,35 @@ class Environment:
 
         # return self.state, reward, self.done
         return demand_state, reward, self.done
+
+    def get_functional_nodes(self):
+        """
+        Get the functional / independent nodes
+
+        :return: list of functional and independent nodes as a 0-1 vector
+        """
+        # get demand values of our graph
+        demand = nx.get_node_attributes(self.G_constant, 'demand')
+        util = nx.get_node_attributes(self.G_constant, 'util')
+
+        stepwise_demand = nx.get_node_attributes(self.G, 'demand')
+
+        start = time.time()
+        functional_nodes = []
+        for node in self.G:
+            for id_node in self.independent_nodes:
+                if nx.has_path(self.G, id_node, node) and id_node != node:
+                    functional_nodes.append(node)
+
+        # possible nodes must be adjacent to either functional or independent nodes
+        adjacent_to = functional_nodes + self.independent_nodes
+        adjacent_to = list(set(adjacent_to))
+
+        vec = np.array([1 if idx in adjacent_to else 0 for idx in range(self.number_of_nodes)])
+        # Never count the utility of the independent nodes
+        # vec[self.independent_nodes] = 0
+
+        return vec
 
     def reset(self):
         """

@@ -2,6 +2,7 @@ import numpy as np
 from graph_helper import r_tree, plot_graph
 from online_environment import Environment
 import networkx as nx
+import time
 
 
 def m_hinge(x, eps=0.01):
@@ -14,6 +15,18 @@ def c_hinge(x):
 
 def n_hinge(x, eps=0.01):
     return max(-(1/eps)*x + 1, 0)
+
+
+def allocation_filter_matrix(N, S):
+    """ Construct the node allocation filter matrix (N x NS) """
+    print("N={0}, S={1}".format(N,S))
+    return np.tile(np.eye(N), (1, S))
+
+
+def step_filter_matrix(N, S):
+    """ Construct the step filter matrix (N x NS) """
+    print("N={0}, S={1}".format(N, S))
+    return np.kron(np.eye(S), np.ones((1, N)))
 
 
 def get_adjacent_nodes(G, func_nodes):
@@ -82,12 +95,44 @@ def eval_obj(actions, G, independent_nodes, resources):
     return reward
 
 
+def create_u_t(util, demand, r):
+    N = len(util)
+    S = np.ceil(demand / r)
+    M_n = allocation_filter_matrix(N, S)
+    M_w = step_filter_matrix(N, S)
+
+    def calc_obj(L):
+        """ Use L to calculate the objective function. This will be passed into autograd """
+        # do stuff
+        obj = 0
+
+        # First constraint
+        pi_1 = 0
+
+    # Return a function which takes in L as an argument
+    return calc_obj
+
+
+def test_matrix_generation():
+    print("testing allocation filter matrix")
+    print(allocation_filter_matrix(2, 2))
+    print(allocation_filter_matrix(3, 2))
+    print(allocation_filter_matrix(4, 3))
+    print("")
+
+    print("testing step filter matrix")
+    print(step_filter_matrix(2,2))
+    print(step_filter_matrix(5,3))
+    print(step_filter_matrix(4, 2))
+
+
 def main():
-    num_nodes = 7
-    G = r_tree(num_nodes)
-    plot_graph(G, 0, 'environment_debug_graph.png')
-    actions = np.array([[0, 1, 1, 1, 0, 0, 0] for _ in range(10)])
-    print(eval_obj(actions, G, [0], 1))
+    #num_nodes = 7
+    #G = r_tree(num_nodes)
+    #plot_graph(G, 0, 'environment_debug_graph.png')
+    #actions = np.array([[0, 1, 1, 1, 0, 0, 0] for _ in range(10)])
+    #print(eval_obj(actions, G, [0], 1))
+    test_matrix_generation()
 
 
 if __name__=='__main__':

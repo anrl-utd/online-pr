@@ -17,6 +17,21 @@ def n_hinge(x, eps=0.01):
     return max(-(1/eps)*x + 1, 0)
 
 
+def m_hinge_vec(V):
+    for idx in range(len(V)):
+        V[idx] = m_hinge(V[idx])
+
+    return V
+
+
+def c_hinge_vec(V):
+    print(V)
+    for idx in range(len(V)):
+        V[idx] = c_hinge(V[idx])
+
+    return V
+
+
 def allocation_filter_matrix(N, S):
     """ Construct the node allocation filter matrix (N x NS) """
     print("N={0}, S={1}".format(N,S))
@@ -97,17 +112,47 @@ def eval_obj(actions, G, independent_nodes, resources):
 
 def create_u_t(G, util, demand, r):
     N = len(util)
-    S = np.ceil(demand / r)
+    S = int(np.ceil(np.sum(demand) / r))
     M_n = allocation_filter_matrix(N, S)
     M_w = step_filter_matrix(N, S)
+    # initial functionality vector, always start recovery from node 0
+    F_0 = np.zeros(N)
+    F_0[0] = 1
+    util[0] = 0
+    demand[0] = 0
+
+    adj_matrix = nx.to_numpy_matrix(G)
 
     def calc_obj(L):
         """ Use L to calculate the objective function. This will be passed into autograd """
+        lam_1 = 1e7
+        lam_2 = 1e7 
+        lam_3 = 1e7 
         # do stuff
         obj = 0
+        F_last = F_0 
+        F_s = [F_0]
+        for s in range(1, S+1):
+            m_s = m_hinge_vec(np.matmul(M_n, L) - demand)
+            print(F_last.T, '\nadj', adj_matrix, '\nres', np.matmul(F_last.T, adj_matrix))
+            print('next\n')
+            res = np.matmul(F_last.T, adj_matrix)
+            c_s = c_hinge_vec(res.reshape((N,)))
+            # element wise multiply
+            F_last = np.multiply(m_s, c_s)
+            F_s.append(F_last)
+            obj += np.dot(util, F_last)
 
         # First constraint
-        pi_1 = 0
+        pi_1 = lam_1 * np.dot(np.ones(N), np.max(np.matmul(M_w, L) - np.full(N, r), 0))
+
+        # Second constraint
+        pi_2 = 0
+
+        # Third constraint
+        pi_3 = 0
+
+        return obj + pi_1 + pi_2 + pi_3
 
     # Return a function which takes in L as an argument
     return calc_obj
@@ -127,12 +172,23 @@ def test_matrix_generation():
 
 
 def main():
-    #num_nodes = 7
-    #G = r_tree(num_nodes)
-    #plot_graph(G, 0, 'environment_debug_graph.png')
-    #actions = np.array([[0, 1, 1, 1, 0, 0, 0] for _ in range(10)])
-    #print(eval_obj(actions, G, [0], 1))
-    test_matrix_generation()
+    num_nodes = 7
+    resources = 1
+    G = r_tree(num_nodes)
+
+    plot_graph(G, 0, 'environment_debug_graph.png')
+    utils = [0 for _ in range(num_nodes)]
+    for key, val in nx.get_node_attributes(G, 'util').items():
+        utils[key] = val
+    demand = [0 for _ in range(num_nodes)]
+    for key, val in nx.get_node_attributes(G, 'demand').items():
+        demand[key] = val
+
+    N = len(utils)
+    S = int(np.ceil(np.sum(demand) / resources))
+    obj_func = create_u_t(G, utils, demand, resources)
+
+    print(obj_func(np.zeros(N * S)))
 
 
 if __name__=='__main__':

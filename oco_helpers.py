@@ -95,7 +95,7 @@ def eval_obj(actions, G, independent_nodes, resources):
     return reward
 
 
-def create_u_t(util, demand, r):
+def create_u_t(G, util, demand, r):
     N = len(util)
     S = np.ceil(demand / r)
     M_n = allocation_filter_matrix(N, S)

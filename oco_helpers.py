@@ -134,9 +134,11 @@ def create_u_t(G, util, demand, r):
         F_s = [F_0]
         for s in range(1, S+1):
             m_s = m_hinge_vec(np.matmul(M_n, L) - demand)
-            print(F_last.T, '\nadj', adj_matrix, '\nres', np.matmul(F_last.T, adj_matrix))
-            print('next\n')
+            print(F_last.T, '\nadj', adj_matrix)
             res = np.matmul(F_last.T, adj_matrix)
+            # convert res back to array
+            res = np.squeeze(np.asarray(res))
+            print('res', res)
             c_s = c_hinge_vec(res.reshape((N,)))
             # element wise multiply
             F_last = np.multiply(m_s, c_s)
